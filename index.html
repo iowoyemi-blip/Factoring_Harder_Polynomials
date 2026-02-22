@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Advanced Polynomial Factoring Forge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]]
+        },
+        options: {
+          skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"]
+        }
+      };
+    </script>
+    <script
+      id="MathJax-script"
+      async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"
+    ></script>
+  </head>
+  <body>
+    <div class="background-layer" aria-hidden="true"></div>
+    <div class="app-shell">
+      <header class="hero">
+        <p class="eyebrow">Practice Studio</p>
+        <h1>Advanced Polynomial Factoring Forge</h1>
+        <p class="subtitle">
+          Train complete factoring fluency across binomials, trinomials, and quadratic-form quartics.
+        </p>
+      </header>
+
+      <div class="layout">
+        <aside class="panel nav-panel" aria-label="Curriculum navigator">
+          <h2>Course Map</h2>
+          <div id="curriculum-tree" class="curriculum-tree"></div>
+
+          <h2>Mastery Strands</h2>
+          <div id="strand-progress" class="strand-progress"></div>
+        </aside>
+
+        <main class="panel workspace-panel" id="main-content">
+          <section class="scoreboard" aria-label="Progress tracking">
+            <article class="stat-card">
+              <p class="stat-label">Selected Topic</p>
+              <p id="topic-score" class="stat-value">0 / 0</p>
+              <p id="topic-score-detail" class="stat-detail">Pick a topic to begin.</p>
+            </article>
+            <article class="stat-card">
+              <p class="stat-label">Overall Score</p>
+              <p id="overall-score" class="stat-value">0 / 0</p>
+              <p id="overall-score-detail" class="stat-detail">0% accuracy</p>
+            </article>
+            <article class="stat-card">
+              <p class="stat-label">Coverage</p>
+              <p id="coverage-score" class="stat-value">0 / 4 topics</p>
+              <p id="coverage-detail" class="stat-detail">Attempt each topic at least once.</p>
+            </article>
+          </section>
+
+          <section id="workspace" class="workspace" aria-live="polite"></section>
+        </main>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
