@@ -3,6 +3,7 @@ const STARTED_TOPICS_KEY = "advanced-polynomial-forge-started-topics-v1";
 const frameworkTopics = [
   "Difference of squares binomials (with common factors needing pulling out first)",
   "Easy trinomials with a = 1 (with common factors needing pulling out first)",
+  "Perfect square trinomials (with common factors needing pulling out first)",
   "Harder trinomials with a not = 1 (with common factors needing pulling out first)",
   "Quartics trinomials in The Quadratic Form (e.g. 8x^4 -12x^2 - 80, with common factors needing pulling out first)"
 ];
@@ -23,15 +24,22 @@ const strandDefinitions = [
     topicIds: ["trinomial-a1-gcf"]
   },
   {
-    id: "strand-anot1",
-    title: "Strand 3: Harder Trinomials (a != 1)",
+    id: "strand-pst",
+    title: "Strand 3: Perfect Square Trinomials",
     target: 10,
     prerequisite: "strand-a1",
+    topicIds: ["trinomial-ps-gcf"]
+  },
+  {
+    id: "strand-anot1",
+    title: "Strand 4: Harder Trinomials (a != 1)",
+    target: 10,
+    prerequisite: "strand-pst",
     topicIds: ["trinomial-anot1-gcf"]
   },
   {
     id: "strand-quartic",
-    title: "Strand 4: Quartic Quadratic Form",
+    title: "Strand 5: Quartic Quadratic Form",
     target: 10,
     prerequisite: "strand-anot1",
     topicIds: ["quartic-quadratic-gcf"]
@@ -72,6 +80,23 @@ const topicLibraryByFrameworkIndex = [
     },
     formatHint: "Typed form example: 4*(x+7)*(x-3)",
     generator: generateEasyTrinomialQuestion
+  },
+  {
+    id: "trinomial-ps-gcf",
+    shortLabel: "Perfect square trinomials + GCF",
+    strandId: "strand-pst",
+    sectionId: "section-foundations",
+    strategy: {
+      steps: [
+        "Pull out the full GCF first (often a number and an x).",
+        "Check whether the inside trinomial matches a^2x^2 +/- 2abx + b^2.",
+        "Rewrite the inside as (ax +/- b)^2, then keep the GCF in front."
+      ],
+      workedExampleLatex:
+        "8x^3 - 40x^2 + 50x = 2x(4x^2 - 20x + 25) = 2x(2x - 5)^2"
+    },
+    formatHint: "Typed form example: 2*x*(2*x-5)^2",
+    generator: generatePerfectSquareTrinomialQuestion
   },
   {
     id: "trinomial-anot1-gcf",
@@ -561,6 +586,38 @@ function generateEasyTrinomialQuestion() {
     canonicalLatex: `${g}\\left(${polyLatex([{ coef: 1, power: 1 }, { coef: m, power: 0 }])}\\right)\\left(${polyLatex([{ coef: 1, power: 1 }, { coef: n, power: 0 }])}\\right)`,
     explanation:
       "After removing the GCF, find two numbers that multiply to the constant term and add to the x-coefficient.",
+    minFactorCount: 2
+  };
+}
+
+function generatePerfectSquareTrinomialQuestion() {
+  const g = pick([2, 3, 4, 5, 6, 8, 10]);
+  const a = pick([1, 2, 3, 4, 5]);
+  const b = randInt(2, 10);
+  const sign = pick([-1, 1]);
+
+  const terms = [
+    { coef: g * a * a, power: 3 },
+    { coef: g * (2 * sign * a * b), power: 2 },
+    { coef: g * b * b, power: 1 }
+  ];
+
+  const innerFactorExpr = polyExpr([
+    { coef: a, power: 1 },
+    { coef: sign * b, power: 0 }
+  ]);
+
+  const innerFactorLatex = polyLatex([
+    { coef: a, power: 1 },
+    { coef: sign * b, power: 0 }
+  ]);
+
+  return {
+    promptLatex: polyLatex(terms),
+    expectedExpr: `${g}*x*(${innerFactorExpr})^2`,
+    canonicalLatex: `${g}x\\left(${innerFactorLatex}\\right)^2`,
+    explanation:
+      "First factor out the GCF, then recognize the inside as a perfect-square trinomial and write it as a squared binomial.",
     minFactorCount: 2
   };
 }
