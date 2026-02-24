@@ -54,7 +54,7 @@ const topicLibraryByFrameworkIndex = [
     sectionId: "section-foundations",
     strategy: {
       steps: [
-        "Check for a numeric GCF in every term before anything else.",
+        "Check for a full GCF (number and/or variable) in every term before anything else.",
         "After pulling out the GCF, confirm you have a binomial with two perfect squares.",
         "Apply a^2 - b^2 = (a + b)(a - b) and include the GCF out front."
       ],
@@ -148,6 +148,12 @@ const sectionDefinitions = {
 const curriculum = buildCurriculumTree(frameworkTopics);
 const topicsById = new Map(curriculum.units.flatMap((unit) => unit.sections.flatMap((section) => section.topics.map((topic) => [topic.id, topic]))));
 const strandsById = new Map(curriculum.strands.map((strand) => [strand.id, strand]));
+const GCF_TYPES = ["constant", "variable", "constant+variable"];
+const gcfTypeUsageByTopic = {
+  "dos-gcf": createEmptyGcfTypeUsage(),
+  "trinomial-a1-gcf": createEmptyGcfTypeUsage(),
+  "trinomial-ps-gcf": createEmptyGcfTypeUsage()
+};
 
 const state = {
   selectedTopicId: null,
@@ -522,15 +528,78 @@ function getStrandCorrect(strandId) {
   return strand.topicIds.reduce((sum, topicId) => sum + state.topicStats[topicId].correct, 0);
 }
 
+function createEmptyGcfTypeUsage() {
+  return {
+    constant: 0,
+    variable: 0,
+    "constant+variable": 0
+  };
+}
+
+function pickGcfProfile(topicId) {
+  if (!gcfTypeUsageByTopic[topicId]) {
+    gcfTypeUsageByTopic[topicId] = createEmptyGcfTypeUsage();
+  }
+
+  const usage = gcfTypeUsageByTopic[topicId];
+  const minUsage = Math.min(...GCF_TYPES.map((type) => usage[type]));
+  const eligibleTypes = GCF_TYPES.filter((type) => usage[type] === minUsage);
+  const gcfType = pick(eligibleTypes);
+  usage[gcfType] += 1;
+
+  if (gcfType === "constant") {
+    return { type: gcfType, coefficient: pick([2, 3, 4, 5, 6, 8, 10]), variablePower: 0 };
+  }
+
+  if (gcfType === "variable") {
+    return { type: gcfType, coefficient: 1, variablePower: pick([1, 2]) };
+  }
+
+  return { type: gcfType, coefficient: pick([2, 3, 4, 5, 6, 8, 10]), variablePower: pick([1, 2]) };
+}
+
+function applyGcfToTerms(baseTerms, gcfProfile) {
+  return baseTerms.map((term) => ({
+    coef: term.coef * gcfProfile.coefficient,
+    power: term.power + gcfProfile.variablePower
+  }));
+}
+
+function gcfExpr(gcfProfile) {
+  const factors = [];
+
+  if (gcfProfile.coefficient !== 1 || gcfProfile.variablePower === 0) {
+    factors.push(String(gcfProfile.coefficient));
+  }
+
+  if (gcfProfile.variablePower > 0) {
+    factors.push(gcfProfile.variablePower === 1 ? "x" : `x^${gcfProfile.variablePower}`);
+  }
+
+  return factors.join("*");
+}
+
+function gcfLatex(gcfProfile) {
+  const coefficientPart =
+    gcfProfile.coefficient === 1 && gcfProfile.variablePower > 0 ? "" : `${gcfProfile.coefficient}`;
+  const variablePart =
+    gcfProfile.variablePower === 0 ? "" : gcfProfile.variablePower === 1 ? "x" : `x^{${gcfProfile.variablePower}}`;
+
+  return `${coefficientPart}${variablePart}` || "1";
+}
+
 function generateDifferenceOfSquaresQuestion() {
-  const g = pick([2, 3, 4, 5, 6, 8, 10, 12]);
+  const gcfProfile = pickGcfProfile("dos-gcf");
   const a = pick([1, 2, 3, 4, 5, 6]);
   const b = randInt(2, 14);
 
-  const terms = [
-    { coef: g * a * a, power: 2 },
-    { coef: -g * b * b, power: 0 }
-  ];
+  const terms = applyGcfToTerms(
+    [
+      { coef: a * a, power: 2 },
+      { coef: -b * b, power: 0 }
+    ],
+    gcfProfile
+  );
 
   const factorA = polyExpr([
     { coef: a, power: 1 },
@@ -542,12 +611,15 @@ function generateDifferenceOfSquaresQuestion() {
     { coef: -b, power: 0 }
   ]);
 
+  const outsideExpr = gcfExpr(gcfProfile);
+  const outsideLatex = gcfLatex(gcfProfile);
+
   return {
     promptLatex: polyLatex(terms),
-    expectedExpr: `${g}*(${factorA})*(${factorB})`,
-    canonicalLatex: `${g}\\left(${polyLatex([{ coef: a, power: 1 }, { coef: b, power: 0 }])}\\right)\\left(${polyLatex([{ coef: a, power: 1 }, { coef: -b, power: 0 }])}\\right)`,
+    expectedExpr: `${outsideExpr}*(${factorA})*(${factorB})`,
+    canonicalLatex: `${outsideLatex}\\left(${polyLatex([{ coef: a, power: 1 }, { coef: b, power: 0 }])}\\right)\\left(${polyLatex([{ coef: a, power: 1 }, { coef: -b, power: 0 }])}\\right)`,
     explanation:
-      "Pull out the GCF first, then use the difference-of-squares identity a^2 - b^2 = (a+b)(a-b).",
+      "Pull out the full GCF first (including any x-power), then use a^2 - b^2 = (a+b)(a-b).",
     minFactorCount: 2
   };
 }
@@ -561,15 +633,18 @@ function generateEasyTrinomialQuestion() {
     n = randInt(-9, 9);
   } while (m === 0 || n === 0 || m === -n);
 
-  const g = pick([2, 3, 4, 5, 6, 7, 8]);
+  const gcfProfile = pickGcfProfile("trinomial-a1-gcf");
   const b = m + n;
   const c = m * n;
 
-  const terms = [
-    { coef: g, power: 2 },
-    { coef: g * b, power: 1 },
-    { coef: g * c, power: 0 }
-  ];
+  const terms = applyGcfToTerms(
+    [
+      { coef: 1, power: 2 },
+      { coef: b, power: 1 },
+      { coef: c, power: 0 }
+    ],
+    gcfProfile
+  );
 
   const factorA = polyExpr([
     { coef: 1, power: 1 },
@@ -580,27 +655,33 @@ function generateEasyTrinomialQuestion() {
     { coef: n, power: 0 }
   ]);
 
+  const outsideExpr = gcfExpr(gcfProfile);
+  const outsideLatex = gcfLatex(gcfProfile);
+
   return {
     promptLatex: polyLatex(terms),
-    expectedExpr: `${g}*(${factorA})*(${factorB})`,
-    canonicalLatex: `${g}\\left(${polyLatex([{ coef: 1, power: 1 }, { coef: m, power: 0 }])}\\right)\\left(${polyLatex([{ coef: 1, power: 1 }, { coef: n, power: 0 }])}\\right)`,
+    expectedExpr: `${outsideExpr}*(${factorA})*(${factorB})`,
+    canonicalLatex: `${outsideLatex}\\left(${polyLatex([{ coef: 1, power: 1 }, { coef: m, power: 0 }])}\\right)\\left(${polyLatex([{ coef: 1, power: 1 }, { coef: n, power: 0 }])}\\right)`,
     explanation:
-      "After removing the GCF, find two numbers that multiply to the constant term and add to the x-coefficient.",
+      "After removing the full GCF, find two numbers that multiply to the constant term and add to the x-coefficient.",
     minFactorCount: 2
   };
 }
 
 function generatePerfectSquareTrinomialQuestion() {
-  const g = pick([2, 3, 4, 5, 6, 8, 10]);
+  const gcfProfile = pickGcfProfile("trinomial-ps-gcf");
   const a = pick([1, 2, 3, 4, 5]);
   const b = randInt(2, 10);
   const sign = pick([-1, 1]);
 
-  const terms = [
-    { coef: g * a * a, power: 3 },
-    { coef: g * (2 * sign * a * b), power: 2 },
-    { coef: g * b * b, power: 1 }
-  ];
+  const terms = applyGcfToTerms(
+    [
+      { coef: a * a, power: 2 },
+      { coef: 2 * sign * a * b, power: 1 },
+      { coef: b * b, power: 0 }
+    ],
+    gcfProfile
+  );
 
   const innerFactorExpr = polyExpr([
     { coef: a, power: 1 },
@@ -612,12 +693,15 @@ function generatePerfectSquareTrinomialQuestion() {
     { coef: sign * b, power: 0 }
   ]);
 
+  const outsideExpr = gcfExpr(gcfProfile);
+  const outsideLatex = gcfLatex(gcfProfile);
+
   return {
     promptLatex: polyLatex(terms),
-    expectedExpr: `${g}*x*(${innerFactorExpr})^2`,
-    canonicalLatex: `${g}x\\left(${innerFactorLatex}\\right)^2`,
+    expectedExpr: `${outsideExpr}*(${innerFactorExpr})^2`,
+    canonicalLatex: `${outsideLatex}\\left(${innerFactorLatex}\\right)^2`,
     explanation:
-      "First factor out the GCF, then recognize the inside as a perfect-square trinomial and write it as a squared binomial.",
+      "First factor out the full GCF, then recognize the inside as a perfect-square trinomial and write it as a squared binomial.",
     minFactorCount: 2
   };
 }
